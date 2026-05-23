@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Raising Cane's – Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#e31837;--red-dark:#b8102b;--cream:#fff8f0;
+  --white:#ffffff;--gray:#f2f2f2;--gray2:#e0e0e0;
+  --text:#1a1a1a;--muted:#777;
+  --shadow:0 8px 32px rgba(227,24,55,.20);
+  --radius:18px;
+}
+body{font-family:'Nunito',sans-serif;background:var(--cream);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+
+/* DEMO BG */
+.demo-area{text-align:center;max-width:480px}
+.demo-area h1{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--red);letter-spacing:1px;line-height:1}
+.demo-area p{color:var(--muted);margin-top:10px;font-size:15px}
+.demo-area .arrow{margin-top:28px;font-size:13px;color:var(--red);font-weight:700;display:inline-block;animation:ab 1.5s infinite}
+@keyframes ab{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+/* LAUNCHER */
+#rc-launcher{
+  position:fixed;bottom:28px;right:28px;
+  width:68px;height:68px;border-radius:50%;
+  background:#fff;border:3px solid var(--red);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);z-index:9999;
+  transition:transform .2s,box-shadow .2s;
+  overflow:hidden;padding:0;
+}
+#rc-launcher:hover{transform:scale(1.08);box-shadow:0 12px 40px rgba(227,24,55,.35)}
+#rc-launcher img#rc-launcher-logo{
+  width:100%;height:100%;
+  object-fit:cover;border-radius:50%;
+  pointer-events:none;display:block;
+}
+#rc-badge{
+  position:absolute;top:-5px;right:-5px;
+  width:20px;height:20px;background:#fff;color:var(--red);
+  border-radius:50%;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--red);animation:pulse 2s infinite;
+  z-index:10000;
+}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+
+/* CHATBOX */
+#rc-chatbox{
+  position:fixed;bottom:108px;right:28px;
+  width:380px;max-height:640px;
+  background:var(--white);border-radius:var(--radius);
+  box-shadow:0 20px 60px rgba(0,0,0,.18);
+  display:none;flex-direction:column;overflow:hidden;
+  z-index:9998;
+}
+#rc-chatbox.rc-open{display:flex}
+
+/* HEADER */
+.rc-header{
+  background:var(--red);padding:16px 18px;
+  display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+.rc-header-ava{
+  width:44px;height:44px;border-radius:50%;
+  background:white;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;border:2px solid rgba(255,255,255,.4);
+  font-size:22px;
+}
+.rc-header-info{flex:1}
+.rc-header-info h4{font-family:'Bebas Neue',sans-serif;font-size:20px;color:white;letter-spacing:.5px;line-height:1.1}
+.rc-header-info p{font-size:11px;color:rgba(255,255,255,.8);display:flex;align-items:center;gap:4px}
+.rc-header-info p::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80}
+.rc-close{background:none;border:none;color:white;font-size:22px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s;line-height:1}
+.rc-close:hover{background:rgba(255,255,255,.2)}
+
+/* STICKY BAR */
+.rc-sticky{
+  background:var(--red-dark);
+  display:flex;justify-content:space-around;
+  padding:8px 4px;flex-shrink:0;
+}
+.rc-sticky-btn{
+  background:none;border:none;color:white;
+  font-size:10px;font-weight:700;font-family:'Nunito',sans-serif;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:4px 6px;border-radius:8px;transition:background .15s;
+  text-transform:uppercase;letter-spacing:.4px;
+}
+.rc-sticky-btn:hover{background:rgba(255,255,255,.15)}
+.rc-sticky-btn .si{font-size:16px}
+
+/* MESSAGES */
+.rc-messages{
+  flex:1;overflow-y:auto;padding:16px 14px;
+  display:flex;flex-direction:column;gap:10px;
+  scroll-behavior:smooth;
+}
+.rc-messages::-webkit-scrollbar{width:4px}
+.rc-messages::-webkit-scrollbar-thumb{background:var(--gray2);border-radius:4px}
+
+.rc-msg{display:flex;gap:8px;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.rc-msg.rc-bot{align-items:flex-end}
+.rc-msg.rc-user{flex-direction:row-reverse}
+.rc-ava{width:30px;height:30px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.rc-bubble{
+  max-width:82%;padding:10px 14px;
+  border-radius:16px;font-size:13.5px;line-height:1.55;word-break:break-word;
+}
+.rc-bot .rc-bubble{background:var(--gray);color:var(--text);border-bottom-left-radius:4px}
+.rc-user .rc-bubble{background:var(--red);color:white;border-bottom-right-radius:4px}
+.rc-bubble strong{font-weight:800}
+.rc-bubble a{color:var(--red);text-decoration:underline}
+.rc-user .rc-bubble a{color:#ffe0e6}
+
+/* EXTRA CONTENT */
+.rc-extra{padding-left:38px;display:flex;flex-direction:column;gap:8px;animation:fadeUp .3s ease}
+
+/* QUICK REPLIES */
+.rc-qr{display:flex;flex-wrap:wrap;gap:6px;padding:4px 14px 8px;flex-shrink:0}
+.rc-qr-btn{
+  background:none;border:1.5px solid var(--red);color:var(--red);
+  font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+  padding:6px 12px;border-radius:20px;cursor:pointer;
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+.rc-qr-btn:hover{background:var(--red);color:white}
+
+/* INPUT */
+.rc-input-row{
+  padding:12px 14px;border-top:1px solid var(--gray2);
+  display:flex;gap:8px;align-items:flex-end;flex-shrink:0;
+}
+#rc-input{
+  flex:1;border:1.5px solid var(--gray2);border-radius:12px;
+  padding:10px 14px;font-family:'Nunito',sans-serif;font-size:13.5px;
+  resize:none;outline:none;transition:border-color .2s;
+  max-height:90px;line-height:1.4;
+}
+#rc-input:focus{border-color:var(--red)}
+#rc-send{
+  width:40px;height:40px;background:var(--red);border:none;
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;transition:background .2s,transform .15s;
+}
+#rc-send:hover{background:var(--red-dark);transform:scale(1.05)}
+#rc-send svg{width:18px;height:18px;fill:white;pointer-events:none}
+
+/* TYPING */
+.rc-typing{display:flex;gap:4px;align-items:center;padding:4px 0}
+.rc-typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite}
+.rc-typing span:nth-child(2){animation-delay:.2s}
+.rc-typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* CALL CARD */
+.rc-call-card{
+  background:linear-gradient(135deg,var(--red),var(--red-dark));
+  border-radius:14px;padding:14px 16px;color:white;
+}
+.rc-call-card p{font-size:12px;opacity:.85;margin-bottom:4px}
+.rc-call-card .rc-phone{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
+.rc-call-card a.rc-call-now{
+  display:inline-block;margin-top:8px;background:white;color:var(--red);
+  border-radius:20px;padding:7px 18px;font-size:13px;font-weight:800;
+  text-decoration:none;transition:opacity .15s;
+}
+.rc-call-card a.rc-call-now:hover{opacity:.85}
+
+/* LOC CARD */
+.rc-loc-card{background:var(--gray);border-radius:12px;padding:12px 14px;font-size:12.5px}
+.rc-loc-name{font-weight:800;font-size:13px;color:var(--red);margin-bottom:2px}
+.rc-loc-addr{color:var(--muted);margin-bottom:2px}
+.rc-loc-hours{font-weight:700;font-size:12px}
+.rc-loc-phone{font-size:12px;margin-top:2px}
+.rc-loc-card a{
+  display:inline-block;margin-top:6px;background:var(--red);color:white;
+  padding:5px 12px;border-radius:14px;font-size:11.5px;font-weight:700;text-decoration:none;
+}
+
+/* MENU TABLE */
+.rc-menu-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.rc-menu-table th{background:var(--red);color:white;padding:6px 8px;text-align:left;font-size:11px}
+.rc-menu-table td{padding:6px 8px;border-bottom:1px solid var(--gray2)}
+.rc-menu-table tr:last-child td{border-bottom:none}
+.rc-menu-table tr:nth-child(even) td{background:var(--cream)}
+
+/* LEAD FORM */
+.rc-lead-form{background:var(--cream);border:1.5px solid var(--gray2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.rc-lead-form h5{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--red);letter-spacing:.5px}
+.rc-lead-form input,.rc-lead-form select,.rc-lead-form textarea{
+  border:1.5px solid var(--gray2);border-radius:8px;padding:8px 10px;
+  font-family:'Nunito',sans-serif;font-size:13px;outline:none;width:100%;transition:border-color .2s;
+}
+.rc-lead-form input:focus,.rc-lead-form select:focus,.rc-lead-form textarea:focus{border-color:var(--red)}
+.rc-lead-form textarea{resize:none;min-height:60px}
+.rc-lead-form button{
+  background:var(--red);color:white;border:none;border-radius:10px;
+  padding:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;
+  cursor:pointer;transition:background .2s;
+}
+.rc-lead-form button:hover{background:var(--red-dark)}
+
+@media(max-width:420px){
+  #rc-chatbox{width:calc(100vw - 20px);right:10px;bottom:90px}
+  #rc-launcher{right:14px;bottom:14px}
+}
+</style>
+</head>
+<body>
+
+<div class="demo-area">
+  <h1>Raising Cane's<br>Middle East</h1>
+  <p>One Love® – Quality Chicken Finger Meals<br>UAE · Kuwait · Saudi Arabia · Bahrain · Qatar</p>
+  <span class="arrow">👇 Chat with us — bottom right!</span>
+</div>
+
+<!-- LAUNCHER -->
+<button id="rc-launcher" aria-label="Open Chat">
+  <img id="rc-launcher-logo"
+    src="https://www.raisingcanesme.com/en/media_10aa34b272311b80ef072e3bb7e5ecbb145a1363f.png"
+    alt="Raising Cane's Logo"
+  />
+  <div id="rc-badge">1</div>
+</button>
+
+<!-- CHATBOX -->
+<div id="rc-chatbox">
+  <div class="rc-header">
+    <div class="rc-header-ava">
+      <img
+        src="https://www.raisingcanesme.com/en/media_10aa34b272311b80ef072e3bb7e5ecbb145a1363f.png"
+        alt="Raising Cane's"
+        style="width:38px;height:38px;object-fit:contain;border-radius:50%;"
+        onerror="this.parentElement.textContent='🍗'"
+      />
+    </div>
+    <div class="rc-header-info">
+      <h4>Raising Cane's</h4>
+      <p>Online – We're here to help!</p>
+    </div>
+    <button class="rc-close" id="rc-close-btn">✕</button>
+  </div>
+
+  <div class="rc-sticky">
+    <button class="rc-sticky-btn" data-action="call"><span class="si">📞</span>Call</button>
+    <button class="rc-sticky-btn" data-action="locations"><span class="si">📍</span>Locations</button>
+    <button class="rc-sticky-btn" data-action="menu"><span class="si">🍗</span>Menu</button>
+    <button class="rc-sticky-btn" data-action="order"><span class="si">🛒</span>Order</button>
+    <button class="rc-sticky-btn" data-action="contact"><span class="si">💬</span>Contact</button>
+  </div>
+
+  <div class="rc-messages" id="rc-messages"></div>
+  <div class="rc-qr" id="rc-qr"></div>
+
+  <div class="rc-input-row">
+    <textarea id="rc-input" rows="1" placeholder="Type your message…"></textarea>
+    <button id="rc-send">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ── DATA ──────────────────────────────────────────────────────────
+var MENU = [
+  {cat:"Combos",name:"Box Combo",desc:"4 chicken fingers, crinkle-cut fries, Texas toast, coleslaw, Cane's Sauce, drink (22oz)",price:"AED 35"},
+  {cat:"Combos",name:"3 Finger Combo",desc:"3 chicken fingers, crinkle-cut fries, Texas toast, Cane's Sauce, drink (22oz)",price:"AED 31"},
+  {cat:"Combos",name:"Caniac Combo",desc:"6 chicken fingers, crinkle-cut fries, Texas toast, coleslaw, 2 Cane's Sauces, large drink (32oz)",price:"AED 48"},
+  {cat:"Combos",name:"Sandwich Combo",desc:"3 chicken fingers, lettuce, Cane's Sauce, toasted bun, fries, drink (22oz)",price:"AED 33"},
+  {cat:"Combos",name:"Kids Combo",desc:"2 chicken fingers, crinkle-cut fries, Cane's Sauce, small drink (12oz)",price:"AED 22"},
+  {cat:"Tailgates",name:"25 Finger Tailgate",desc:"25 chicken fingers + 8 Cane's Sauces",price:"AED 120"},
+  {cat:"Tailgates",name:"50 Finger Tailgate",desc:"50 chicken fingers + 16 Cane's Sauces",price:"AED 230"},
+  {cat:"Tailgates",name:"75 Finger Tailgate",desc:"75 chicken fingers + 24 Cane's Sauces",price:"AED 340"},
+  {cat:"Tailgates",name:"100 Finger Tailgate",desc:"100 chicken fingers + 32 Cane's Sauces",price:"AED 450"},
+  {cat:"Sides",name:"Crinkle-Cut Fries",desc:"Extra-long centre-cut fries, fresh canola oil",price:"AED 10"},
+  {cat:"Sides",name:"Texas Toast",desc:"Buttery toasted bread, served warm",price:"AED 5"},
+  {cat:"Sides",name:"Coleslaw",desc:"Red & green cabbage, shredded carrots, creamy dressing",price:"AED 8"},
+  {cat:"Sides",name:"Cane's Sauce (1.5oz)",desc:"Tangy, creamy, slightly spicy signature sauce",price:"AED 3"},
+  {cat:"Drinks",name:"Lemonade (32oz)",desc:"Freshly made in-house lemonade",price:"AED 12"},
+  {cat:"Drinks",name:"Iced Tea (32oz)",desc:"Sweet or unsweet, freshly brewed",price:"AED 10"},
+  {cat:"Drinks",name:"Soft Drink (22oz)",desc:"Coke, Sprite, Fanta, etc.",price:"AED 8"},
+  {cat:"Drinks",name:"Jug of Lemonade (128oz)",desc:"Gallon-sized group lemonade",price:"AED 35"},
+];
+
+var LOCS = [
+  {country:"UAE",name:"The Galleria Al Maryah Island",addr:"3rd Floor, Al Maryah Island, Abu Dhabi",phone:"02 492 6862",hours:"10:00 – 01:00 daily",map:"https://www.google.com/maps?cid=16091591648237019534"},
+  {country:"UAE",name:"The Beach Mall – JBR",addr:"The Beach Mall, JBR, Dubai",phone:"04 704 6980",hours:"11:00 – 04:00 daily",map:"https://maps.google.com/maps?cid=7962085309226018712"},
+  {country:"Bahrain",name:"The Avenues – Bahrain",addr:"The Avenues, Manama, Bahrain",phone:"17110585",hours:"10:00–01:00 (Thu/Fri 02:00)",map:"https://maps.google.com/maps?cid=16355567732026222121"},
+  {country:"Bahrain",name:"City Centre Bahrain",addr:"City Centre, Manama, Bahrain",phone:"17110415",hours:"10:00–01:00 (Thu/Fri 02:00)",map:"https://maps.google.com/maps?cid=2831814194146834059"},
+  {country:"Bahrain",name:"The Station – Janabiya Hwy",addr:"Janabiya Highway-10, Bahrain",phone:"17110494",hours:"10:00 – 02:00 daily",map:"https://maps.google.com/maps?cid=17644779694618961463"},
+  {country:"Kuwait",name:"The Mall – The Avenues (GF)",addr:"The Avenues, Al Rai, Kuwait",phone:"22283802",hours:"10:00 – 00:00 daily",map:"https://maps.google.com/maps?cid=6470923619791741057"},
+  {country:"Kuwait",name:"The Forum – The Avenues",addr:"The Avenues (Tekzone), Al Rai, Kuwait",phone:"22283150",hours:"11:00 – 23:00 daily",map:"https://maps.google.com/maps?cid=17326278323768153270"},
+  {country:"Kuwait",name:"1st Avenue – The Avenues",addr:"The Avenues 1st Floor, Al Rai, Kuwait",phone:"22283952",hours:"10:00 – 00:00 daily",map:"https://maps.google.com/maps?cid=10296472770871212006"},
+  {country:"Kuwait",name:"Jabriya Land",addr:"2nd St, Jabriya, Kuwait",phone:"22081391",hours:"10:00 – 05:00 daily",map:"https://maps.google.com/maps?cid=5228119504873407826"},
+  {country:"Kuwait",name:"Kuwait Airport – Air Side",addr:"Farwaniya, Kuwait",phone:"22081394",hours:"Open 24 Hours",map:"https://maps.google.com/maps?cid=482872166596726408"},
+  {country:"Kuwait",name:"Kuwait Airport – Terminal 4",addr:"Farwaniya, Kuwait",phone:"22214790",hours:"Open 24 Hours",map:"https://maps.google.com/maps?cid=9469061367488080241"},
+  {country:"Kuwait",name:"Shuwaikh Industrial",addr:"Shuwaikh, Kuwait",phone:"22214841",hours:"10:00 – 00:00 daily",map:"https://maps.google.com/maps?cid=17833830550582531454"},
+  {country:"Kuwait",name:"Arabian Gulf Street",addr:"Bneid Al Gar, Kuwait",phone:"22214880",hours:"10:00 – 03:00 daily",map:"https://maps.google.com/maps?cid=7157769279944063205"},
+  {country:"Kuwait",name:"Daiya Co-op",addr:"Daiya, Kuwait",phone:"22214872",hours:"10:00 – 03:00 daily",map:"https://maps.google.com/maps?cid=45470432801633636"},
+  {country:"Kuwait",name:"Ahmadi Park",addr:"Ahmadi, Kuwait",phone:"22081441",hours:"11:00 – 00:00 daily",map:"https://maps.google.com/maps?cid=753019646647177244"},
+  {country:"Kuwait",name:"Sabah Al Salem",addr:"Block 1 St 126, Kuwait",phone:"22081060",hours:"10:00 – 05:00 daily",map:"https://www.google.com/maps/place/Raising+Cane%27s/@29.2660723,48.0783733,17z"},
+  {country:"Saudi Arabia",name:"Riyadh Gallery",addr:"Riyadh Gallery, Riyadh, KSA",phone:"115116349",hours:"09:00–01:00 (Fri/Sat 02:00)",map:"https://maps.google.com/maps?cid=13805144104052726800"},
+  {country:"Saudi Arabia",name:"Sidra Mall",addr:"Sidra Mall, Riyadh, KSA",phone:"115203538",hours:"10:00 – 06:00 daily",map:"https://maps.google.com/maps?cid=10520897999203456454"},
+  {country:"Saudi Arabia",name:"Bustan Centre",addr:"Bustan Centre, Riyadh, KSA",phone:"115115505",hours:"10:00 – 06:00 daily",map:"https://maps.google.com/maps?cid=11253907501309525372"},
+  {country:"Saudi Arabia",name:"Alia Plaza",addr:"Alia Plaza, Riyadh, KSA",phone:"115101529",hours:"10:00 – 06:00 daily",map:"https://maps.google.com/maps?cid=1167487025885059465"},
+  {country:"Saudi Arabia",name:"Robeen Plaza",addr:"Robeen Plaza, Riyadh, KSA",phone:"115101470",hours:"10:00 – 06:00 daily",map:"https://maps.google.com/maps?cid=6779110692866886604"},
+  {country:"Saudi Arabia",name:"Liwan Centre",addr:"Liwan Centre, Jeddah, KSA",phone:"122303419",hours:"11:00 – 03:00 daily",map:"https://maps.google.com/maps?cid=7250543804559186086"},
+  {country:"Saudi Arabia",name:"Red Sea Mall",addr:"Red Sea Mall, Jeddah, KSA",phone:"122303417",hours:"11:00 – 02:00 daily",map:"https://maps.google.com/maps?cid=7969293410974912162"},
+  {country:"Saudi Arabia",name:"Sari Gate Mall",addr:"Sari Gate Mall, Jeddah, KSA",phone:"122617404",hours:"10:00 – 06:00 daily",map:"https://maps.google.com/maps?cid=17772929675644990439"},
+  {country:"Saudi Arabia",name:"Centro Corniche – Al Khobar",addr:"Al Khobar, KSA",phone:"138064288",hours:"10:00 – 04:00 daily",map:"https://maps.google.com/maps?cid=14298136093328373330"},
+  {country:"Saudi Arabia",name:"Tamimi Markets – Al Rakah",addr:"Al Khobar, KSA",phone:"138064242",hours:"10:00 – 06:00 daily",map:"https://maps.google.com/maps?cid=8235030870491165097"},
+  {country:"Qatar",name:"Al Meera Ain Khaled – Drive-Thru",addr:"Umm Al Seneem, Zone 56, Ain Khaled, Qatar",phone:"+974 4452 8582",hours:"10:00–03:00 (Fri 13:00–03:00)",map:"https://g.co/kgs/Pt4fd6R"},
+];
+
+var FAQ = [
+  {q:["hi","hello","hey","salam","salaam","مرحبا","السلام","howdy","good morning","good afternoon","good evening","start"],
+   a:"👋 <strong>Welcome to Raising Cane's!</strong><br><br>I'm here to help you with our menu, locations, orders, catering & more. What can I help you with today? 🍗",
+   qr:["View Menu 🍗","Find a Branch 📍","Place Order 🛒","Catering 🎉","Contact Us 💬"]},
+
+  {q:["about","concept","who are you","what is raising","one love","story","founder","todd","graves","1996","mothership","history"],
+   a:"<strong>Raising Cane's</strong> was founded in 1996 by <strong>Todd Graves</strong> in Baton Rouge, Louisiana — nicknamed <strong>'The Mothership'</strong>! 🍗<br><br>Our concept is simple: <strong>ONE LOVE®</strong> — quality chicken finger meals, done perfectly every single time. Fresh, never frozen, cooked to order. We're now in <strong>UAE, Kuwait, Saudi Arabia, Bahrain & Qatar</strong>!",
+   qr:["View Menu 🍗","Find a Branch 📍"]},
+
+  {q:["menu","what do you serve","food","items","what can i eat","what's on","show menu","full menu"],
+   type:"menu"},
+
+  {q:["combo","box combo","3 finger","caniac","sandwich combo","kids combo","meal"],
+   type:"menu_Combos"},
+
+  {q:["tailgate","party","bulk","large order","group","event order","100","75","50","25 finger"],
+   type:"menu_Tailgates"},
+
+  {q:["side","sides","fries","toast","coleslaw","sauce","drink","drinks","lemonade","iced tea","soft drink","jug"],
+   type:"menu_Sides_Drinks"},
+
+  {q:["price","cost","how much","aed","charges","expensive","cheap","affordable","pricing"],
+   a:"Our UAE prices (AED):<br><br>🍗 <strong>Box Combo</strong> – AED 35<br>🍗 <strong>3 Finger Combo</strong> – AED 31<br>🍗 <strong>Caniac Combo (6 fingers)</strong> – AED 48<br>🍗 <strong>Sandwich Combo</strong> – AED 33<br>👶 <strong>Kids Combo</strong> – AED 22<br>📦 <strong>25 Finger Tailgate</strong> – AED 120<br>📦 <strong>50 Finger Tailgate</strong> – AED 230<br><br>Prices may vary slightly by country.",
+   qr:["Full Menu 🍗","Tailgate Packages 📦","Order Now 🛒"]},
+
+  {q:["cane's sauce","canes sauce","signature sauce","what is the sauce","special sauce","secret sauce"],
+   a:"Cane's Sauce is our <strong>iconic secret signature sauce</strong> 😍 — tangy, creamy, and slightly spicy. It's the #1 reason customers come back for more! You can add extra for just <strong>AED 3</strong>. Trust us — order more than one! 🔥"},
+
+  {q:["chicken finger","chicken tender","tenderloin","what is chicken","tenders"],
+   a:"Our chicken fingers are made from <strong>premium chicken tenderloins</strong> — always fresh, never frozen. Breaded and fried to crispy golden perfection. Juicy inside, crunchy outside. That's our <strong>One Love!</strong> 🍗"},
+
+  {q:["location","where","branch","near me","address","store","restaurant","outlet","find","branches","stores"],
+   a:"We have locations across the Middle East! Which country are you in? 📍",
+   qr:["UAE 🇦🇪","Kuwait 🇰🇼","Saudi Arabia 🇸🇦","Bahrain 🇧🇭","Qatar 🇶🇦"]},
+
+  {q:["uae","dubai","abu dhabi","united arab emirates","emirates"],
+   type:"locations_UAE"},
+
+  {q:["kuwait","kuwaiti"],
+   type:"locations_Kuwait"},
+
+  {q:["saudi","ksa","riyadh","jeddah","khobar","saudi arabia"],
+   type:"locations_Saudi Arabia"},
+
+  {q:["bahrain","manama","bahraini"],
+   type:"locations_Bahrain"},
+
+  {q:["qatar","doha","qatari"],
+   type:"locations_Qatar"},
+
+  {q:["hours","open","closing","timing","what time","when","working hours","schedule","open now","are you open"],
+   a:"Our general opening hours:<br><br>🕙 <strong>Open:</strong> 10:00 AM<br>🌙 <strong>Close:</strong> Midnight–4 AM (varies by branch)<br>✈️ <strong>Kuwait Airport branches:</strong> Open <strong>24 Hours!</strong><br>🕐 <strong>JBR Dubai:</strong> 11:00 AM – 4:00 AM<br><br>Want hours for a specific branch?",
+   qr:["UAE Branches 🇦🇪","Kuwait Branches 🇰🇼","Saudi Arabia 🇸🇦","Bahrain 🇧🇭"]},
+
+  {q:["delivery","deliver","order online","home delivery","talabat","deliveroo","careem","zomato"],
+   a:"Yes! We deliver right to your door 🛵<br><br>📱 <a href='https://www.talabat.com' target='_blank'>Order on Talabat</a><br>📱 <a href='https://www.deliveroo.ae' target='_blank'>Order on Deliveroo</a><br><br>Fresh & hot, straight to you! 🍗"},
+
+  {q:["order","place an order","how to order","buy","purchase","want to order"],
+   a:"You can order in 3 easy ways:<br><br>🏪 <strong>Dine-in</strong> — Walk in, no reservation needed!<br>🚗 <strong>Drive-thru</strong> — Quick & convenient<br>📱 <strong>Delivery</strong> — Via Talabat or Deliveroo<br><br>What works best for you?",
+   qr:["Talabat Delivery 📱","Deliveroo Delivery 📱","Find Nearest Branch 📍"]},
+
+  {q:["takeaway","take away","pickup","take out","curbside"],
+   a:"Absolutely! 🥡 Walk into any branch and order at the counter for <strong>takeaway</strong>. No reservation needed — quick service every time!"},
+
+  {q:["catering","cater","corporate","office","wedding","event catering","special event","function"],
+   type:"catering"},
+
+  {q:["halal","is it halal","pork","alcohol","haram","zabiha"],
+   a:"In the Middle East, our chicken is prepared according to <strong>local food standards</strong> and regulations. We always recommend confirming Halal certification with your specific branch directly for the most accurate information. 🙏",
+   qr:["Call Us 📞","Find My Branch 📍"]},
+
+  {q:["gluten","gluten free","allergy","allergen","dietary","vegan","vegetarian","dairy free","nut"],
+   a:"Our menu focuses on breaded chicken, so <strong>gluten-free options are very limited</strong>. We strongly recommend checking with your nearest branch or calling our team for specific allergen details before visiting. Your health is our priority! 🙏",
+   qr:["Call Us 📞","Leave a Message 📝"]},
+
+  {q:["kids","children","family","baby","toddler","child","kid friendly"],
+   a:"We're very <strong>family-friendly!</strong> 👨‍👩‍👧‍👦<br><br>👶 <strong>Kids Combo</strong> — 2 chicken fingers, crinkle-cut fries, Cane's Sauce & small drink — just <strong>AED 22!</strong><br><br>Simple menu, quick service, casual vibe — kids absolutely love it! 🍗"},
+
+  {q:["parking","park","car park","where to park"],
+   a:"Most of our locations are in <strong>malls & shopping centres</strong> with ample parking! 🅿️ For standalone locations, street or nearby parking is available. Check Google Maps directions for your specific branch.",
+   qr:["Find My Branch 📍"]},
+
+  {q:["dress code","dress","what to wear","smart","formal","casual"],
+   a:"<strong>Smart casual is perfectly fine!</strong> 👕 We're a relaxed, fast-casual restaurant. Come as you are — just bring your appetite! 😄"},
+
+  {q:["reservation","book table","booking","reserve","book a table"],
+   a:"<strong>No reservation needed!</strong> 🎉 We're a fast-casual restaurant — simply walk in and order at the counter. We're ready to serve you anytime during our opening hours!"},
+
+  {q:["payment","pay","cash","card","apple pay","samsung pay","credit","debit","contactless","tap"],
+   a:"We accept all major payment methods:<br><br>💳 Credit & Debit cards<br>💵 Cash<br>📱 Apple Pay & Samsung Pay<br>📲 Contactless payments<br><br>Fast & easy checkout every time!"},
+
+  {q:["nutrition","calories","calorie","fat","protein","healthy","nutritional","nutritional info"],
+   a:"For detailed nutritional information, we recommend visiting <a href='https://www.raisingcanesme.com/en/' target='_blank'>our website</a> or asking our team at any branch. Generally, combo meals range from approximately <strong>600–1,200+ calories</strong> depending on size and options."},
+
+  {q:["complaint","issue","problem","bad experience","unhappy","refund","wrong order","mistake","terrible","awful","poor"],
+   type:"complaint"},
+
+  {q:["franchise","franchis","own a","invest","business opportunity","partner","open a","franchise opportunity"],
+   type:"franchise"},
+
+  {q:["contact","email","phone number","reach","get in touch","customer service","support","helpline","how to contact"],
+   a:"Here's how to reach us:<br><br>🌐 <a href='https://www.raisingcanesme.com/en/' target='_blank'>raisingcanesme.com</a><br>📸 Instagram: <a href='https://www.instagram.com/raisingcanesme/' target='_blank'>@raisingcanesme</a><br>📞 Or call your nearest branch directly<br><br>Want me to find your nearest branch?",
+   qr:["Find My Branch 📍","Leave a Message 📝","Call Us 📞"]},
+
+  {q:["call","phone","speak","talk","human","agent","team","call now","speak to someone"],
+   type:"call_card"},
+
+  {q:["thank","thanks","shukran","شكراً","great","awesome","perfect","nice","good","excellent","wonderful"],
+   a:"You're very welcome! 😊 It was a pleasure helping you. <strong>Enjoy your Cane's!</strong> 🍗❤️ Anything else I can do for you?"},
+
+  {q:["bye","goodbye","see you","cya","later","take care"],
+   a:"Goodbye! 👋 Can't wait to serve you your next chicken finger fix! Visit us soon. <strong>One Love! ❤️</strong>"},
+];
+
+// ── DOM REFS ──────────────────────────────────────────────────────
+var launcher  = document.getElementById('rc-launcher');
+var chatbox   = document.getElementById('rc-chatbox');
+var closeBtn  = document.getElementById('rc-close-btn');
+var messages  = document.getElementById('rc-messages');
+var qrArea    = document.getElementById('rc-qr');
+var input     = document.getElementById('rc-input');
+var sendBtn   = document.getElementById('rc-send');
+var badge     = document.getElementById('rc-badge');
+var isOpen    = false;
+var greeted   = false;
+
+// ── TOGGLE ────────────────────────────────────────────────────────
+function toggleChat(){
+  isOpen = !isOpen;
+  if(isOpen){
+    chatbox.classList.add('rc-open');
+    badge.style.display='none';
+    if(!greeted){ greeted=true; doGreet(); }
+    setTimeout(function(){input.focus()},300);
+  } else {
+    chatbox.classList.remove('rc-open');
+  }
+}
+launcher.addEventListener('click', toggleChat);
+closeBtn.addEventListener('click', toggleChat);
+
+// ── STICKY BAR ────────────────────────────────────────────────────
+var stickyMap = {
+  call:"I want to call your team",
+  locations:"Show me all your locations",
+  menu:"Show me the full menu",
+  order:"I want to place an order",
+  contact:"How can I contact you"
+};
+document.querySelectorAll('.rc-sticky-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    sendMsg(stickyMap[btn.dataset.action]);
+  });
+});
+
+// ── INPUT ─────────────────────────────────────────────────────────
+sendBtn.addEventListener('click', onSend);
+input.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }
+});
+input.addEventListener('input', function(){
+  this.style.height='auto';
+  this.style.height=Math.min(this.scrollHeight,90)+'px';
+});
+function onSend(){
+  var val=input.value.trim();
+  if(!val) return;
+  sendMsg(val);
+}
+
+// ── SCROLL ────────────────────────────────────────────────────────
+function scrollBot(){
+  setTimeout(function(){ messages.scrollTop=messages.scrollHeight; },60);
+}
+
+// ── CLEAR QR ─────────────────────────────────────────────────────
+function clearQR(){ qrArea.innerHTML=''; }
+
+// ── SHOW QR ───────────────────────────────────────────────────────
+function showQR(opts){
+  clearQR();
+  opts.forEach(function(o){
+    var b=document.createElement('button');
+    b.className='rc-qr-btn'; b.textContent=o;
+    b.addEventListener('click',function(){ clearQR(); sendMsg(o); });
+    qrArea.appendChild(b);
+  });
+}
+
+// ── ADD BOT MSG ───────────────────────────────────────────────────
+function addBotMsg(html, extraHTML){
+  var wrap=document.createElement('div');
+  wrap.className='rc-msg rc-bot';
+  wrap.innerHTML='<div class="rc-ava">🍗</div><div class="rc-bubble">'+html+'</div>';
+  messages.appendChild(wrap);
+  if(extraHTML){
+    var ext=document.createElement('div');
+    ext.className='rc-extra';
+    ext.innerHTML=extraHTML;
+    messages.appendChild(ext);
+  }
+  scrollBot();
+}
+
+// ── ADD USER MSG ──────────────────────────────────────────────────
+function addUserMsg(text){
+  var wrap=document.createElement('div');
+  wrap.className='rc-msg rc-user';
+  wrap.innerHTML='<div class="rc-bubble">'+escHtml(text)+'</div>';
+  messages.appendChild(wrap);
+  scrollBot();
+}
+
+function escHtml(t){
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── TYPING ────────────────────────────────────────────────────────
+function showTyping(){
+  var wrap=document.createElement('div');
+  wrap.className='rc-msg rc-bot'; wrap.id='rc-typing';
+  wrap.innerHTML='<div class="rc-ava">🍗</div><div class="rc-bubble"><div class="rc-typing"><span></span><span></span><span></span></div></div>';
+  messages.appendChild(wrap); scrollBot();
+}
+function hideTyping(){ var t=document.getElementById('rc-typing'); if(t) t.remove(); }
+
+// ── BUILD MENU TABLE ──────────────────────────────────────────────
+function buildMenuTable(cats){
+  var items=MENU.filter(function(i){ return !cats||cats.indexOf(i.cat)>-1; });
+  var html='<div style="overflow-x:auto"><table class="rc-menu-table"><thead><tr><th>Item</th><th>Price</th></tr></thead><tbody>';
+  items.forEach(function(i){
+    html+='<tr><td><strong>'+i.name+'</strong><br><span style="color:#777;font-size:11px">'+i.desc+'</span></td><td style="white-space:nowrap;font-weight:700;color:#e31837">'+i.price+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  return html;
+}
+
+// ── BUILD LOC CARDS ───────────────────────────────────────────────
+function buildLocCards(country){
+  var locs=LOCS.filter(function(l){ return l.country===country; });
+  return locs.map(function(l){
+    return '<div class="rc-loc-card">'
+      +'<div class="rc-loc-name">📍 '+l.name+'</div>'
+      +'<div class="rc-loc-addr">'+l.addr+'</div>'
+      +'<div class="rc-loc-hours">⏰ '+l.hours+'</div>'
+      +(l.phone?'<div class="rc-loc-phone">📞 '+l.phone+'</div>':'')
+      +'<a href="'+l.map+'" target="_blank">Get Directions →</a>'
+      +'</div>';
+  }).join('');
+}
+
+// ── BUILD CALL CARD ───────────────────────────────────────────────
+function buildCallCard(phone, label){
+  phone=phone||'02 492 6862';
+  label=label||'UAE – Abu Dhabi (Galleria)';
+  var tel=phone.replace(/\s/g,'');
+  return '<div class="rc-call-card">'
+    +'<p>📞 Speak With Our Team — '+label+'</p>'
+    +'<div class="rc-phone">'+phone+'</div>'
+    +'<p style="opacity:.7;font-size:11px;margin-top:4px">Fastest way to get accurate answers!</p>'
+    +'<a class="rc-call-now" href="tel:'+tel+'">Call Now</a>'
+    +'</div>';
+}
+
+// ── BUILD LEAD FORM ───────────────────────────────────────────────
+function buildLeadForm(type){
+  var titles={catering:"🍗 Catering Inquiry",complaint:"💬 Share Your Feedback",franchise:"🤝 Franchise Inquiry",default:"📝 Leave Your Details"};
+  var title=titles[type]||titles.default;
+  var extra='';
+  if(type==='catering'){
+    extra='<input type="text" id="lf_date" placeholder="Event Date (approx.)"/>'
+         +'<input type="number" id="lf_guests" placeholder="Number of Guests"/>';
+  }
+  return '<div class="rc-lead-form" id="rc-lead-form">'
+    +'<h5>'+title+'</h5>'
+    +'<input type="text" id="lf_name" placeholder="Your Name *"/>'
+    +'<input type="tel" id="lf_phone" placeholder="Phone Number *"/>'
+    +'<input type="email" id="lf_email" placeholder="Email Address"/>'
+    +extra
+    +'<select id="lf_reason">'
+    +'<option value="">What\'s this about?</option>'
+    +'<option>Catering Inquiry</option>'
+    +'<option>General Question</option>'
+    +'<option>Complaint / Feedback</option>'
+    +'<option>Franchise Inquiry</option>'
+    +'<option>Other</option>'
+    +'</select>'
+    +'<textarea id="lf_msg" placeholder="Additional message (optional)…"></textarea>'
+    +'<button id="lf_submit">Send Message 🍗</button>'
+    +'</div>';
+}
+
+// attach submit dynamically
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id==='lf_submit'){
+    var name=document.getElementById('lf_name');
+    var phone=document.getElementById('lf_phone');
+    if(!name||!name.value.trim()||!phone||!phone.value.trim()){
+      alert('Please enter your name and phone number.'); return;
+    }
+    var n=name.value.trim(), p=phone.value.trim();
+    var form=document.getElementById('rc-lead-form');
+    if(form) form.remove();
+    addBotMsg('✅ <strong>Got it, '+escHtml(n)+'!</strong> Our team will contact you at <strong>'+escHtml(p)+'</strong> shortly.<br><br>Thank you for choosing Raising Cane\'s! 🍗❤️');
+    showQR(["View Menu 🍗","Find a Branch 📍","Order Now 🛒"]);
+  }
+});
+
+// ── REPLY ENGINE ──────────────────────────────────────────────────
+function getMatch(text){
+  var lower=text.toLowerCase();
+  for(var i=0;i<FAQ.length;i++){
+    var item=FAQ[i];
+    for(var j=0;j<item.q.length;j++){
+      if(lower.indexOf(item.q[j])>-1) return item;
+    }
+  }
+  return null;
+}
+
+function processReply(match, raw){
+  if(!match){
+    addBotMsg("Hmm, I'd love to help with that! Let me connect you with our team for the most accurate answer. 😊", buildCallCard());
+    showQR(["View Menu 🍗","Find a Branch 📍","Leave a Message 📝"]);
+    return;
+  }
+
+  var type=match.type||'';
+
+  if(type==='menu'){
+    addBotMsg("Here's our full menu 🍗", buildMenuTable(null));
+    showQR(["Combos Only 🍗","Tailgates 📦","Sides & Drinks 🥤","Order Now 🛒"]);
+    return;
+  }
+  if(type==='menu_Combos'){
+    addBotMsg("Our Combo Meals 🍗", buildMenuTable(['Combos']));
+    showQR(["Tailgates 📦","Sides & Drinks 🥤","Order Now 🛒"]);
+    return;
+  }
+  if(type==='menu_Tailgates'){
+    addBotMsg("Our Tailgate Packages 📦 — Perfect for groups & events!", buildMenuTable(['Tailgates']));
+    showQR(["Combos 🍗","Order Now 🛒","Catering Inquiry 🎉"]);
+    return;
+  }
+  if(type==='menu_Sides_Drinks'){
+    addBotMsg("Sides & Drinks 🥤", buildMenuTable(['Sides','Drinks']));
+    showQR(["Combos 🍗","Full Menu","Order Now 🛒"]);
+    return;
+  }
+  if(type==='call_card'){
+    addBotMsg("Our team is ready for you right now! 📞", buildCallCard());
+    showQR(["Find My Branch 📍","Leave Contact Details 📝"]);
+    return;
+  }
+  if(type && type.indexOf('locations_')===0){
+    var country=type.replace('locations_','');
+    addBotMsg('<strong>'+country+'</strong> Locations 📍', buildLocCards(country));
+    showQR(["Hours & Timing ⏰","Order Now 🛒","Call Us 📞"]);
+    return;
+  }
+  if(type==='catering'){
+    addBotMsg("We'd love to cater your event! 🎉 Please fill in the details below:", buildLeadForm('catering'));
+    return;
+  }
+  if(type==='complaint'){
+    addBotMsg("I'm sorry to hear you had an issue! 😔 Our team would love to make it right. Please share your details:", buildLeadForm('complaint'));
+    return;
+  }
+  if(type==='franchise'){
+    addBotMsg("Exciting! Let us connect you with the right person for franchise opportunities. 🤝", buildLeadForm('franchise'));
+    return;
+  }
+
+  // quick-reply shorthand checks
+  var low=raw.toLowerCase();
+  if(low.indexOf('combos only')>-1||low.indexOf('combo only')>-1){
+    addBotMsg("Our Combo Meals 🍗", buildMenuTable(['Combos']));
+    showQR(["Tailgates 📦","Sides & Drinks 🥤","Order Now 🛒"]);
+    return;
+  }
+  if(low.indexOf('tailgate')>-1){
+    addBotMsg("Our Tailgate Packages 📦", buildMenuTable(['Tailgates']));
+    showQR(["Combos 🍗","Order Now 🛒"]);
+    return;
+  }
+  if(low.indexOf('sides')>-1||low.indexOf('drinks')>-1){
+    addBotMsg("Sides & Drinks 🥤", buildMenuTable(['Sides','Drinks']));
+    showQR(["Combos 🍗","Full Menu","Order Now 🛒"]);
+    return;
+  }
+  if(low.indexOf('talabat')>-1){
+    addBotMsg("Order on <strong>Talabat</strong> 📱 — click below:",
+      '<a href="https://www.talabat.com" target="_blank" style="display:inline-block;background:#e31837;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:700;margin-top:4px">Open Talabat 🛵</a>');
+    return;
+  }
+  if(low.indexOf('deliveroo')>-1){
+    addBotMsg("Order on <strong>Deliveroo</strong> 📱 — click below:",
+      '<a href="https://www.deliveroo.ae" target="_blank" style="display:inline-block;background:#e31837;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:700;margin-top:4px">Open Deliveroo 🛵</a>');
+    return;
+  }
+  if(low.indexOf('leave a message')>-1||low.indexOf('leave contact')>-1){
+    addBotMsg("Sure! Fill in your details and our team will reach out shortly 😊", buildLeadForm('default'));
+    return;
+  }
+
+  // plain text reply
+  addBotMsg(match.a||'');
+  if(match.qr) showQR(match.qr);
+}
+
+// ── SEND MSG ──────────────────────────────────────────────────────
+function sendMsg(text){
+  clearQR();
+  addUserMsg(text);
+  input.value=''; input.style.height='auto';
+  showTyping();
+  var delay=600+Math.random()*400;
+  setTimeout(function(){
+    hideTyping();
+    var match=getMatch(text);
+    processReply(match, text);
+  }, delay);
+}
+
+// ── GREET ─────────────────────────────────────────────────────────
+function doGreet(){
+  showTyping();
+  setTimeout(function(){
+    hideTyping();
+    addBotMsg('👋 <strong>Welcome to Raising Cane\'s!</strong><br><br>I\'m here to help you with our menu, locations, orders, catering & more. How can I help you today? 🍗');
+    showQR(["View Menu 🍗","Find a Branch 📍","Place Order 🛒","Catering 🎉","Contact Us 💬"]);
+  },900);
+}
+
+})(); // end IIFE
+</script>
+</body>
+</html>
